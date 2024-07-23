@@ -12,6 +12,16 @@ import requests
 import torch
 import random
 from datetime import datetime
+
+import signal
+# 全局标志，用于指示是否应该停止程序
+shutdown_flag = False
+
+def signal_handler(sig, frame):
+    global shutdown_flag
+    print_in_color('Received signal to stop, will shut down after completing current task...', "\033[31m")
+    shutdown_flag = True
+
 now = datetime.now()
 from datasets import load_dataset
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
@@ -179,6 +189,7 @@ def complete_task(wallet_address, training_duration=0, max_retries=5, retry_dela
 
 
 def perform():
+    global shutdown_flag
     addr = sys.argv[1]
     # Check if master_wallet is provided
     master_wallet = sys.argv[2] if len(sys.argv) > 2 else None
@@ -205,6 +216,9 @@ def perform():
                 print_in_color("### Disk space:", "\033[31m")
                 check_disk_space()
                 time.sleep(30)
+                if shutdown_flag == True:
+                    print_in_color("end with shutdown flag...", "\033[31m")
+                    break
             except Exception as e:
                 print_in_color(f"Error: {e}", "\033[31m")
     else:
@@ -245,4 +259,5 @@ def log_task(wallet_address, train_runtime, status, file_path='my_logs.json'):
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGUSR1, signal_handler)
     perform()
